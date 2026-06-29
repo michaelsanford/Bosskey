@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.github/workflows/release.yml'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.github/workflows/release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+  publish:
+    name: Publish Matrix (${{ matrix.rid }})
+    runs-on: ubuntu-latest
+    needs: build-test
+    strategy:
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore target RID
+        run: dotnet restore Bosskey.csproj --runtime ${{ matrix.rid }}
+
+      - name: Publish self-contained executable
+        run: |
+          dotnet publish Bosskey.csproj \
+            --configuration Release \
+            --runtime ${{ matrix.rid }} \
+            --self-contained \
+            --no-restore \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false

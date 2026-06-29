@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Sign (${{ matrix.rid }})
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write     # Required for cosign OIDC token and build attestation
+      attestations: write # Required for actions/attest-build-provenance
+      contents: read
+
+    strategy:
+      matrix:
+        rid: [win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Bosskey.csproj --runtime ${{ matrix.rid }}
+
+      - name: Publish self-contained binary
+        run: |
+          dotnet publish Bosskey.csproj \
+            --no-restore \
+            --configuration Release \
+            --runtime ${{ matrix.rid }} \
+            --self-contained \
+            --output publish/ \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false
+
+      - name: Determine artifact filename
+        run: |
+          if [ "${{ matrix.rid }}" = "win-x64" ] || [ "${{ matrix.rid }}" = "win-arm64" ]; then
+            echo "FILE_NAME=bosskey-${{ github.ref_name }}-${{ matrix.rid }}.exe" >> $GITHUB_ENV
+            cp "publish/Bosskey.exe" "publish/bosskey-${{ github.ref_name }}-${{ matrix.rid }}.exe"
+          else
+            echo "FILE_NAME=bosskey-${{ github.ref_name }}-${{ matrix.rid }}" >> $GITHUB_ENV
+            cp "publish/Bosskey" "publish/bosskey-${{ github.ref_name }}-${{ matrix.rid }}"
+          fi
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: publish/${{ env.FILE_NAME }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign artifact with cosign (keyless)
+        run: |
+          cosign sign-blob --yes \
+            publish/${{ env.FILE_NAME }} \
+            --bundle publish/${{ env.FILE_NAME }}.bundle
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.rid }}
+          path: |
+            publish/${{ env.FILE_NAME }}
+            publish/${{ env.FILE_NAME }}.bundle
+
+  release:
+    name: Create Draft Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write     # Required for cosigning the SBOM & SBOM attestation
+      attestations: write # Required for SBOM build provenance attestation
+      contents: write     # Required to write release and upload assets
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: assets/
+          merge-multiple: true
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          dotnet tool install --global CycloneDX --version 6.2.0
+          dotnet-CycloneDX Bosskey.csproj -o sbom/ -fn bosskey-${{ github.ref_name }}-sbom.cdx.json -F Json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign SBOM with cosign (keyless)
+        run: |
+          cosign sign-blob --yes \
+            sbom/bosskey-${{ github.ref_name }}-sbom.cdx.json \
+            --bundle sbom/bosskey-${{ github.ref_name }}-sbom.cdx.json.bundle
+
+      - name: Attest SBOM build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: sbom/bosskey-${{ github.ref_name }}-sbom.cdx.json
+
+      - name: Move SBOM to release assets
+        run: |
+          mv sbom/bosskey-${{ github.ref_name }}-sbom.cdx.json assets/
+          mv sbom/bosskey-${{ github.ref_name }}-sbom.cdx.json.bundle assets/
+
+      - name: Create Draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            assets/* \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --draft
