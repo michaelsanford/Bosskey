@@ -498,7 +498,7 @@ namespace Bosskey
             warningText.AppendLine(progress > 85 ? " -> Flushing memory mapped caches... [SUCCESS]" : " -> Flushing memory mapped caches... [WAITING]");
             warningText.AppendLine(progress >= 100 ? " -> Firewall isolation established. Subnet quarantine active. [LOCKED]" : " -> Establishing firewall isolation... [WAITING]");
 
-            return new Panel(new Markup($"[bold red]{warningText}[/]"))
+            return new Panel(new Markup($"[bold red]{Markup.Escape(warningText.ToString())}[/]"))
                 .Header("[blink red] !!! SYSTEM FAILURE DETECTED !!! [/]")
                 .Border(BoxBorder.Double)
                 .BorderColor(Color.Red)
