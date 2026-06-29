@@ -219,30 +219,30 @@ namespace Bosskey
 
             // Add new logs and limit size
             NidsLogs.Add(GenerateMockNidsLog());
-            if (NidsLogs.Count > 30) NidsLogs.RemoveAt(0);
+            if (NidsLogs.Count > 100) NidsLogs.RemoveAt(0);
 
             CloudLogs.Add(GenerateMockCloudLog());
-            if (CloudLogs.Count > 30) CloudLogs.RemoveAt(0);
+            if (CloudLogs.Count > 100) CloudLogs.RemoveAt(0);
 
             DbLogs.Add(GenerateMockDbLog());
-            if (DbLogs.Count > 30) DbLogs.RemoveAt(0);
+            if (DbLogs.Count > 100) DbLogs.RemoveAt(0);
 
             // Kernel logs scroll faster - add multiple occasionally
             int kernelLines = Random.Shared.Next(1, 4);
             for (int k = 0; k < kernelLines; k++)
             {
                 KernelLogs.Add(GenerateMockKernelLog());
-                if (KernelLogs.Count > 40) KernelLogs.RemoveAt(0);
+                if (KernelLogs.Count > 100) KernelLogs.RemoveAt(0);
             }
 
             AiLogs.Add(GenerateMockAiLog());
-            if (AiLogs.Count > 30) AiLogs.RemoveAt(0);
+            if (AiLogs.Count > 100) AiLogs.RemoveAt(0);
 
             // Mainframe logs scroll at moderate rate
             if (Random.Shared.Next(0, 2) == 0)
             {
                 MfLogs.Add(GenerateMockMfLog());
-                if (MfLogs.Count > 40) MfLogs.RemoveAt(0);
+                if (MfLogs.Count > 100) MfLogs.RemoveAt(0);
             }
 
             // Update IAM Audit stats
@@ -252,7 +252,7 @@ namespace Bosskey
             if (Random.Shared.Next(0, 10) == 0)
             {
                 IamViolations.Add(GenerateMockIamViolation());
-                if (IamViolations.Count > 10) IamViolations.RemoveAt(0);
+                if (IamViolations.Count > 30) IamViolations.RemoveAt(0);
             }
 
             // Update Terraform deploy steps
@@ -330,13 +330,25 @@ namespace Bosskey
             };
         }
 
+        private static int GetAvailableLogHeight(int padding = 8)
+        {
+            try
+            {
+                return Math.Max(5, Console.WindowHeight - padding);
+            }
+            catch
+            {
+                return 15;
+            }
+        }
+
         #endregion
 
         #region Dashboard Renderer Methods
 
         private static IRenderable RenderNidsMode()
         {
-            var leftPanel = new Panel(new Text(string.Join("\n", NidsLogs.TakeLast(16))))
+            var leftPanel = new Panel(new Text(string.Join("\n", NidsLogs.TakeLast(GetAvailableLogHeight(8)))))
                 .Header("[green] Live Packet Capture & Inspection (DPI) [/]")
                 .Border(BoxBorder.Square)
                 .BorderColor(Color.Green)
@@ -402,7 +414,7 @@ namespace Bosskey
                 .Expand();
 
             // Right panel: Orchestration logs
-            var rightPanel = new Panel(new Text(string.Join("\n", CloudLogs.TakeLast(15))))
+            var rightPanel = new Panel(new Text(string.Join("\n", CloudLogs.TakeLast(GetAvailableLogHeight(8)))))
                 .Header("[cyan] Orchestrator Pod Activity Logs [/]")
                 .Border(BoxBorder.Square)
                 .BorderColor(Color.Cyan)
@@ -450,7 +462,7 @@ namespace Bosskey
             // Violations panel
             string violationsStr = IamViolations.Count == 0
                 ? "[green]No critical identity path compromises identified.[/]"
-                : string.Join("\n", IamViolations.TakeLast(6));
+                : string.Join("\n", IamViolations.TakeLast(GetAvailableLogHeight(14)));
 
             var violationsPanel = new Panel(new Text(violationsStr))
                 .Header("[red] Critical Escalation Match Vector Path Alerts [/]")
@@ -472,7 +484,7 @@ namespace Bosskey
 
         private static IRenderable RenderKernelMode()
         {
-            var logText = string.Join("\n", KernelLogs.TakeLast(22));
+            var logText = string.Join("\n", KernelLogs.TakeLast(GetAvailableLogHeight(8)));
             return new Panel(new Text(logText))
                 .Header("[green] Low-Level System Kernel Telemetry & ETW Ringbuffer Trace [/]")
                 .Border(BoxBorder.Square)
@@ -510,7 +522,7 @@ namespace Bosskey
             rightGrid.AddRow(new Markup($"[bold]Database Lock IOPS Activity (40s):[/]\n[magenta]{sparkline}[/]"));
             rightGrid.AddEmptyRow();
 
-            var logsText = new Panel(new Text(string.Join("\n", DbLogs.TakeLast(8))))
+            var logsText = new Panel(new Text(string.Join("\n", DbLogs.TakeLast(GetAvailableLogHeight(13)))))
                 .Header("[cyan] Slow Query Logs & Deadlock Tracer [/]")
                 .BorderColor(Color.Grey35)
                 .Expand();
@@ -576,7 +588,7 @@ namespace Bosskey
             rightGrid.AddEmptyRow();
 
             // Eval logs
-            var logsPanel = new Panel(new Text(string.Join("\n", AiLogs.TakeLast(7))))
+            var logsPanel = new Panel(new Text(string.Join("\n", AiLogs.TakeLast(GetAvailableLogHeight(16)))))
                 .Header("[cyan] Checkpoint Evaluation Prompts [/]")
                 .BorderColor(Color.Grey35)
                 .Expand();
@@ -631,7 +643,7 @@ namespace Bosskey
                 .Expand();
 
             // Right Panel: Terraform live execution log
-            var rightPanel = new Panel(new Text(string.Join("\n", TfLogs.TakeLast(16))))
+            var rightPanel = new Panel(new Text(string.Join("\n", TfLogs.TakeLast(GetAvailableLogHeight(8)))))
                 .Header("[green] Terraform Run Console stdout [/]")
                 .Border(BoxBorder.Square)
                 .BorderColor(Color.Green)
@@ -645,7 +657,7 @@ namespace Bosskey
         private static IRenderable RenderMfMode()
         {
             // Retro monochrome IBM system z/OS layout
-            var logText = string.Join("\n", MfLogs.TakeLast(22));
+            var logText = string.Join("\n", MfLogs.TakeLast(GetAvailableLogHeight(8)));
             return new Panel(new Text(logText))
                 .Header("[greenyellow] IBM z/OS System Master Console -- Display Console (CON1) [/]")
                 .Border(BoxBorder.Double)
