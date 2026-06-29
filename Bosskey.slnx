@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Bosskey.csproj" />
+  <Project Path="Bosskey.Tests/Bosskey.Tests.csproj" />
+</Solution>
