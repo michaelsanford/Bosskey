@@ -621,7 +621,7 @@ namespace Bosskey
                     _ => ""
                 };
 
-                table.AddRow(r.Address, r.Type, actionStr, stateStr);
+                table.AddRow(new Text(r.Address), new Text(r.Type), new Markup(actionStr), new Markup(stateStr));
             }
 
             var leftPanel = new Panel(table)
