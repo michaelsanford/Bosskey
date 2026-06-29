@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bosskey - Professional Initech Workload Simulator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #080a0f;
+            --card-bg: #111420;
+            --accent-green: #00ff66;
+            --accent-blue: #0099ff;
+            --accent-cyan: #00f0ff;
+            --accent-magenta: #ff007f;
+            --accent-yellow: #ffcc00;
+            --accent-red: #ff3333;
+            --text-main: #e2e8f0;
+            --text-muted: #718096;
+            --border-color: #1e2538;
+            --terminal-bg: #030407;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+
+
+        header {
+            padding: 4rem 2rem 2rem 2rem;
+            text-align: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background-color: rgba(255, 51, 51, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.2);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 5px rgba(255, 51, 51, 0.2); }
+            50% { box-shadow: 0 0 15px rgba(255, 51, 51, 0.5); }
+            100% { box-shadow: 0 0 5px rgba(255, 51, 51, 0.2); }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 30%, #a0aec0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 2.5rem auto;
+        }
+
+        /* Container Grid */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 2rem 5rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 3rem;
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                grid-template-columns: 1.4fr 1fr;
+            }
+        }
+
+        /* Interactive Terminal Mockup */
+        .terminal-container {
+            background-color: var(--terminal-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 240, 255, 0.05);
+            position: relative;
+            min-height: 520px;
+        }
+
+        .terminal-header {
+            background-color: #121625;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background-color: var(--accent-red); }
+        .dot-yellow { background-color: var(--accent-yellow); }
+        .dot-green { background-color: var(--accent-green); }
+
+        .terminal-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .terminal-screen {
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #030407;
+            position: relative;
+        }
+
+        /* Grid inner layout for split dashboards */
+        .tui-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            height: 100%;
+        }
+
+        @media (min-width: 600px) {
+            .tui-layout.split {
+                grid-template-columns: 1.2fr 1fr;
+            }
+        }
+
+        .tui-panel {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 6px;
+            background-color: rgba(17, 20, 32, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .tui-panel.green { border-color: rgba(0, 255, 102, 0.4); }
+        .tui-panel.cyan { border-color: rgba(0, 240, 255, 0.4); }
+        .tui-panel.blue { border-color: rgba(0, 153, 255, 0.4); }
+        .tui-panel.yellow { border-color: rgba(255, 204, 0, 0.4); }
+        .tui-panel.magenta { border-color: rgba(255, 0, 127, 0.4); }
+        .tui-panel.red { border-color: rgba(255, 51, 51, 0.8); background-color: rgba(255, 51, 51, 0.05); }
+
+        .panel-header {
+            font-weight: bold;
+            margin-bottom: 0.75rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 0.25rem;
+        }
+
+        .green-text { color: var(--accent-green); }
+        .cyan-text { color: var(--accent-cyan); }
+        .blue-text { color: var(--accent-blue); }
+        .yellow-text { color: var(--accent-yellow); }
+        .magenta-text { color: var(--accent-magenta); }
+        .red-text { color: var(--accent-red); }
+        .muted-text { color: var(--text-muted); }
+
+        .log-feed {
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 280px;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: column-reverse;
+            line-height: 1.5;
+        }
+
+        /* Sparkline bar elements */
+        .sparkline-container {
+            letter-spacing: 0.1em;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Footer navbar inside terminal */
+        .terminal-nav {
+            background-color: #0b0e17;
+            border-top: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        .nav-btn.active {
+            background-color: #1e2538;
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        /* Marketing & Pitch Panel */
+        .pitch-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .pitch-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 1.75rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-main);
+        }
+
+        .feature-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        /* Use Cases Section */
+        .use-cases-title {
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin: 4rem 0 3rem 0;
+        }
+
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .use-cases-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+
+        .use-case-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+        }
+
+        .use-case-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .use-case-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: #fff;
+        }
+
+        /* Code Block */
+        .code-container {
+            background-color: var(--terminal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            position: relative;
+            margin-top: 1.5rem;
+        }
+
+        .code-header {
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .code-body {
+            color: var(--accent-green);
+            white-space: pre-wrap;
+        }
+
+        footer.site-footer {
+            text-align: center;
+            padding: 4rem 2rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 5rem;
+        }
+
+        /* Tables inside TUI */
+        .tui-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        .tui-table th {
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding-bottom: 0.25rem;
+            color: var(--text-main);
+        }
+
+        .tui-table td {
+            padding: 0.25rem 0;
+            color: var(--text-muted);
+        }
+
+        /* CRT flicker effect */
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.99; }
+        }
+
+        .crt-flicker {
+            animation: flicker 0.15s infinite;
+        }
+
+        .install-btn {
+            background-color: var(--accent-cyan);
+            color: #030407;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            display: inline-block;
+        }
+
+        .install-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+            background-color: #fff;
+        }
+
+        .github-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            display: inline-block;
+        }
+
+        .github-btn:hover {
+            border-color: #fff;
+            background-color: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+
+    <header>
+        <div class="badge">Warning: 100% Ineffective</div>
+        <h1>Bosskey</h1>
+        <p class="subtitle">The ultimate, high-fidelity TUI workload simulator designed to look incredibly busy. Shield yourself from managers, Bobs, and sudden performance audits in style.</p>
+
+        <div style="margin-top: 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: center; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <a href="https://github.com/michaelsanford/Bosskey/releases/latest" class="install-btn" id="install-button">
+                📥 Download Latest Version
+            </a>
+            <a href="https://github.com/michaelsanford/Bosskey" class="github-btn" style="text-decoration: none;">
+                🐙 GitHub Repository
+            </a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Interactive Terminal Simulator -->
+        <div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-green); text-align: center; margin-bottom: 0.75rem; text-shadow: 0 0 5px rgba(0, 255, 102, 0.3);">
+                💡 Tip: Click the buttons below or press <kbd style="background-color: #1e2538; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border-color); color: #fff;">1-8</kbd> / <kbd style="background-color: #1e2538; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border-color); color: #fff;">E</kbd> on your keyboard to switch the live demo dashboards!
+            </div>
+
+            <div class="terminal-container crt-flicker">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                </div>
+                <div class="terminal-title">micha@corp-workstation:~ (Simulated)</div>
+                <div></div>
+            </div>
+
+            <!-- Terminal Screen -->
+            <div class="terminal-screen" id="terminal-screen">
+                <!-- Content will be injected dynamically via JS -->
+            </div>
+
+            <!-- TUI Mode Switcher -->
+            <div class="terminal-nav" id="terminal-nav">
+                <button class="nav-btn active" data-mode="NIDS">1 NIDS</button>
+                <button class="nav-btn" data-mode="CLOUD">2 Cloud</button>
+                <button class="nav-btn" data-mode="IAM">3 IAM</button>
+                <button class="nav-btn" data-mode="KERNEL">4 Kernel</button>
+                <button class="nav-btn" data-mode="DB">5 DB</button>
+                <button class="nav-btn" data-mode="AI">6 AI</button>
+                <button class="nav-btn" data-mode="TF">7 TF</button>
+                <button class="nav-btn" data-mode="MF">8 MF</button>
+                <button class="nav-btn" data-mode="REDALERT" style="border-color: var(--accent-red); color: var(--accent-red);">E Alert</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- Pitch & Tech Specs -->
+        <div class="pitch-container">
+            <div class="pitch-card">
+                <h2>📊 Initech Efficiency Shield</h2>
+                <p>Are you tired of looking like you only do 15 minutes of real actual work a week? Do you need a screen full of moving telemetry, matrices, compiler registers, and cloud alerts to deter people from approaching your desk?</p>
+                <p><strong>Bosskey</strong> compiles to a single self-contained desktop console executable. It does absolutely nothing of utility, queries no networks, and writes no files. It just looks spectacular.</p>
+                
+                <ul class="feature-list">
+                    <li><strong>8 Plausible Dashboards</strong> covering Network, Cloud, Active Directory, databases, AI clusters, and mainframes.</li>
+                    <li><strong>Emergency Lockdown mode</strong> triggers a simulated red-alert quarantine wipe procedure.</li>
+                    <li><strong>Interactive keyboard controls</strong> to pause log scrolls, change update speed, or toggle dashboards.</li>
+                </ul>
+
+                <div class="code-container">
+                    <div class="code-header">Compile to Standalone Binary</div>
+                    <div class="code-body">dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Tongue-in-Cheek Proposed Use Cases -->
+    <section>
+        <h2 class="use-cases-title">💡 Highly Recommended Use Cases</h2>
+        <div class="use-cases-grid">
+            <div class="use-case-card">
+                <div class="use-case-icon">🕴️</div>
+                <h3>The Bobs' Interview Cover</h3>
+                <p>When the efficiency consultants walk past your cubicle. Having 8 H100 GPUs running at 98% utilization with live loss metrics signals you are far too critical to be laid off.</p>
+            </div>
+            <div class="use-case-card">
+                <div class="use-case-icon">💬</div>
+                <h3>The Watercooler Deterrent</h3>
+                <p>Avoid mundane meetings. If anyone attempts to ask you about the TPS report cover sheet, point to a flashing Red Alert panel and whisper: <em>"Subnet quarantine is at 85%. I can't look away."</em></p>
+            </div>
+            <div class="use-case-card">
+                <div class="use-case-icon">☕</div>
+                <h3>Extended Coffee Breaks</h3>
+                <p>Leave the simulator running in full screen with a 50ms tick rate while you go for a 2-hour lunch. Anyone peering into your office will think your computer is compiling kernel drivers.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <p>© 2026 Michael Sanford. Released under the MIT License. Absolutely zero warranties included.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.75rem; color: #4a5568;">This application is a joke/parody tool. It does not perform actual security, cloud auditing, network monitoring, or mainframe connectivity operations.</p>
+    </footer>
+
+    <!-- Interactive JS Simulator Engine -->
+    <script>
+        const terminalScreen = document.getElementById('terminal-screen');
+        const navButtons = document.querySelectorAll('.nav-btn');
+        let currentMode = 'NIDS';
+        let totalTicks = 0;
+
+        // Buffers for log history
+        const logHistory = {
+            NIDS: [],
+            CLOUD: [],
+            DB: [],
+            KERNEL: [],
+            AI: [],
+            TF: [],
+            MF: []
+        };
+
+        // Populate initial logs
+        for(let i=0; i<15; i++) {
+            logHistory.NIDS.push(generateNidsLog());
+            logHistory.CLOUD.push(generateCloudLog());
+            logHistory.DB.push(generateDbLog());
+            logHistory.KERNEL.push(generateKernelLog());
+            logHistory.AI.push(generateAiLog());
+            logHistory.TF.push(generateTfLog());
+            logHistory.MF.push(generateMfLog());
+        }
+
+        // Setup matrix of mock static assets
+        const tfResources = [
+            { address: 'aws_vpc.vpc_main', type: 'aws_vpc', action: '+ ADD', state: 'COMPLETE' },
+            { address: 'aws_subnet.subnet_a', type: 'aws_subnet', action: '+ ADD', state: 'COMPLETE' },
+            { address: 'aws_security_group.allow_web', type: 'aws_security_group', action: '+ ADD', state: 'CREATING...' },
+            { address: 'aws_iam_role.ec2_admin', type: 'aws_iam_role', action: '~ MODIFY', state: 'PENDING' },
+            { address: 'aws_instance.web_servers[0]', type: 'aws_instance', action: '+ ADD', state: 'PENDING' },
+            { address: 'aws_db_instance.db_master', type: 'aws_db_instance', action: '+ ADD', state: 'PENDING' }
+        ];
+
+        // Mode Navigation listeners
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                navButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.getAttribute('data-mode');
+                renderScreen();
+            });
+        });
+
+        // Main Ticker
+        setInterval(() => {
+            totalTicks++;
+            
+            // Advance Logs
+            logHistory.NIDS.shift(); logHistory.NIDS.push(generateNidsLog());
+            logHistory.CLOUD.shift(); logHistory.CLOUD.push(generateCloudLog());
+            logHistory.DB.shift(); logHistory.DB.push(generateDbLog());
+            logHistory.KERNEL.shift(); logHistory.KERNEL.push(generateKernelLog());
+            logHistory.AI.shift(); logHistory.AI.push(generateAiLog());
+            logHistory.TF.shift(); logHistory.TF.push(generateTfLog());
+            logHistory.MF.shift(); logHistory.MF.push(generateMfLog());
+
+            // Update TF simulation states
+            if (totalTicks % 12 === 0) {
+                const pending = tfResources.find(r => r.state === 'PENDING' || r.state === 'CREATING...');
+                if (pending) {
+                    pending.state = pending.state === 'PENDING' ? 'CREATING...' : 'COMPLETE';
+                } else {
+                    // Reset
+                    tfResources.forEach(r => r.state = 'PENDING');
+                    tfResources[0].state = 'COMPLETE';
+                }
+            }
+
+            renderScreen();
+        }, 800);
+
+        function renderScreen() {
+            let html = '';
+            
+            // Render Header
+            const timeStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            html += `<div style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; font-size: 0.75rem;">
+                <div><span class="muted-text">HOST:</span> <span class="cyan-text">initech-desktop</span></div>
+                <div><span class="muted-text">MODE:</span> <span class="yellow-text">${currentMode}</span></div>
+                <div><span class="muted-text">TIME:</span> <span class="green-text">${timeStr}</span></div>
+            </div>`;
+
+            if (currentMode === 'NIDS') {
+                html += `<div class="tui-layout split">
+                    <div class="tui-panel green">
+                        <div class="panel-header">Packet Inspection Flow (DPI)</div>
+                        <div class="log-feed green-text">${logHistory.NIDS.join('\n')}</div>
+                    </div>
+                    <div class="tui-panel cyan">
+                        <div class="panel-header">Threat Analysis</div>
+                        <div style="margin-bottom: 0.75rem;">Threat Signature Index: <span class="red-text">74% Warning</span></div>
+                        <div class="sparkline-container cyan-text">Pressure: ▂▃▅▆▆▇▇█▇▆▅▃ </div>
+                        <div style="margin-top: 1rem;" class="panel-header">Audit subnets</div>
+                        <table class="tui-table">
+                            <tr><th>Scope</th><th>Score</th><th>State</th></tr>
+                            <tr><td>10.120.4.0/24</td><td class="green-text">12</td><td>PASS</td></tr>
+                            <tr><td>172.16.8.0/20</td><td class="red-text">92</td><td>SCAN</td></tr>
+                            <tr><td>192.168.1.0/24</td><td class="green-text">5</td><td>MON</td></tr>
+                        </table>
+                    </div>
+                </div>`;
+            } 
+            else if (currentMode === 'CLOUD') {
+                html += `<div class="tui-layout split">
+                    <div class="tui-panel blue">
+                        <div class="panel-header">K8s Registry Node Cluster</div>
+                        <table class="tui-table">
+                            <tr><th>Region</th><th>Status</th><th>Cpu Load</th></tr>
+                            <tr><td>aws.us-east-1</td><td class="green-text">HEALTHY</td><td>▂▃▅▄ 42%</td></tr>
+                            <tr><td>gcp.us-central</td><td class="yellow-text">DEGRADED</td><td>▅▆▇▇ 82%</td></tr>
+                            <tr><td>azure.westeur</td><td class="green-text">HEALTHY</td><td>▂▂▃  19%</td></tr>
+                            <tr><td>aws.ap-northeast</td><td class="red-text">FAILING</td><td>████ 98%</td></tr>
+                        </table>
+                    </div>
+                    <div class="tui-panel cyan">
+                        <div class="panel-header">Deploy Orchestrator Log</div>
+                        <div class="log-feed cyan-text">${logHistory.CLOUD.join('\n')}</div>
+                    </div>
+                </div>`;
+            }
+            else if (currentMode === 'IAM') {
+                html += `<div class="tui-layout split">
+                    <div class="tui-panel yellow">
+                        <div class="panel-header">Active Directory OU Schema</div>
+                        <div class="yellow-text" style="line-height: 1.4;">
+                        └─ OU=DomainControllers<br>
+                        &nbsp;&nbsp;&nbsp;├─ DC-PRD-01.corp.internal<br>
+                        └─ OU=SecurityGroups<br>
+                        &nbsp;&nbsp;&nbsp;├─ <span class="red-text">CN=Domain Admins (DELEGATED)</span><br>
+                        └─ OU=Accounts<br>
+                        &nbsp;&nbsp;&nbsp;├─ CN=svc_backup (Scanning...)<br>
+                        &nbsp;&nbsp;&nbsp;├─ CN=msanford (Audited)
+                        </div>
+                    </div>
+                    <div class="tui-panel red">
+                        <div class="panel-header">Escalation match vectors</div>
+                        <div style="font-size: 0.75rem; line-height: 1.4;">
+                            <span class="red-text">[ALERT] User 'svc_backup' privileges allow write access to schema template paths.</span><br><br>
+                            <span class="yellow-text">[WARN] User 'contractor_12' password age > 180 days (Policy limit exceeded).</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            else if (currentMode === 'KERNEL') {
+                html += `<div class="tui-panel green" style="flex-grow: 1;">
+                    <div class="panel-header">Driver Interrupt Register Tracing & Hex Dumps</div>
+                    <div class="log-feed green-text" style="font-size: 0.8rem; line-height: 1.4;">${logHistory.KERNEL.join('\n')}</div>
+                </div>`;
+            }
+            else if (currentMode === 'DB') {
+                html += `<div class="tui-layout split">
+                    <div class="tui-panel magenta">
+                        <div class="panel-header">Database Replica Lag</div>
+                        <table class="tui-table">
+                            <tr><th>DB Name</th><th>State</th><th>Replication Lag</th></tr>
+                            <tr><td>sales_db</td><td class="green-text">SYNCED</td><td>0.14ms</td></tr>
+                            <tr><td>telemetry_db</td><td class="yellow-text">SLOWING</td><td>1.42s</td></tr>
+                            <tr><td>billing_db_shard01</td><td class="red-text">LAGGING</td><td>18.42s</td></tr>
+                        </table>
+                    </div>
+                    <div class="tui-panel cyan">
+                        <div class="panel-header">Slow Query Monitor</div>
+                        <div class="log-feed cyan-text">${logHistory.DB.join('\n')}</div>
+                    </div>
+                </div>`;
+            }
+            else if (currentMode === 'AI') {
+                html += `<div class="tui-layout split">
+                    <div class="tui-panel blue">
+                        <div class="panel-header">LLM Pre-Training GPUs Cluster</div>
+                        <table class="tui-table">
+                            <tr><th>Node ID</th><th>Temp</th><th>Watts</th><th>Util</th></tr>
+                            <tr><td>H100-SXM-0</td><td>74°C</td><td>385W</td><td class="green-text">████ 98%</td></tr>
+                            <tr><td>H100-SXM-1</td><td>78°C</td><td>420W</td><td class="green-text">████ 99%</td></tr>
+                            <tr><td>H100-SXM-2</td><td>82°C</td><td>480W</td><td class="red-text">████ 100%</td></tr>
+                            <tr><td>H100-SXM-3</td><td>61°C</td><td>180W</td><td class="yellow-text">██░░ 40%</td></tr>
+                        </table>
+                    </div>
+                    <div class="tui-panel cyan">
+                        <div class="panel-header">Checkpoint Prompts Eval</div>
+                        <div class="log-feed cyan-text" style="font-size: 0.75rem;">${logHistory.AI.join('\n')}</div>
+                    </div>
+                </div>`;
+            }
+            else if (currentMode === 'TF') {
+                html += `<div class="tui-layout split">
+                    <div class="tui-panel cyan">
+                        <div class="panel-header">Terraform Apply status</div>
+                        <table class="tui-table">
+                            <tr><th>Address</th><th>Action</th><th>State</th></tr>
+                            ${tfResources.map(r => `<tr>
+                                <td>${r.address}</td>
+                                <td class="${r.action.includes('+') ? 'green-text' : 'yellow-text'}">${r.action}</td>
+                                <td class="${r.state === 'COMPLETE' ? 'green-text' : 'yellow-text'}">${r.state}</td>
+                            </tr>`).join('')}
+                        </table>
+                    </div>
+                    <div class="tui-panel green">
+                        <div class="panel-header">Terraform stdout</div>
+                        <div class="log-feed green-text">${logHistory.TF.join('\n')}</div>
+                    </div>
+                </div>`;
+            }
+            else if (currentMode === 'MF') {
+                html += `<div class="tui-panel green" style="flex-grow: 1; border-color: var(--accent-green);">
+                    <div class="panel-header" style="color: var(--accent-green);">IBM z/OS Display Console CON1 (Simulated)</div>
+                    <div class="log-feed green-text" style="color: var(--accent-green); line-height: 1.4;">${logHistory.MF.join('\n')}</div>
+                </div>`;
+            }
+            else if (currentMode === 'REDALERT') {
+                html += `<div class="tui-panel red" style="flex-grow: 1; border-color: var(--accent-red); background-color: rgba(255,51,51,0.08); text-align: center; justify-content: center; align-items: center; padding: 2rem;">
+                    <div class="red-text" style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; animation: pulse-red 1s infinite;">
+                        🚨 SYSTEM BREACH DETECTED - LOCKDOWN IN PROGRESS 🚨
+                    </div>
+                    <div class="muted-text" style="max-width: 500px; margin: 0 auto; line-height: 1.5; font-size: 0.8rem; text-align: left;">
+                        [10:32:01] REVOKING IAM ENDPOINT TOKENS... <span class="green-text">[SUCCESS]</span><br>
+                        [10:32:02] DISABLING AWS GATEWAYS... <span class="green-text">[SUCCESS]</span><br>
+                        [10:32:04] FLUSHING CACHED PASSWORD HASHES... <span class="yellow-text">[IN PROGRESS]</span><br>
+                        [10:32:05] DROP ALL ACTIVE TCP SOCKETS... <span class="yellow-text">[WAITING]</span><br>
+                        [10:32:06] QUARANTINING CORP SUBNETS... <span class="yellow-text">[WAITING]</span>
+                    </div>
+                </div>`;
+            }
+
+            terminalScreen.innerHTML = html;
+        }
+
+        // Log Generators
+        function generateNidsLog() {
+            const ips = ['192.168.1.12', '10.0.4.84', '172.16.2.9', '45.142.120.9', '185.220.101.5'];
+            const src = ips[Math.floor(Math.random() * ips.length)];
+            const dst = '10.120.4.' + Math.floor(Math.random() * 254 + 1);
+            const acts = ['ALLOW', 'BLOCK', 'INSPECT'];
+            const act = acts[Math.floor(Math.random() * acts.length)];
+            const actColor = act === 'ALLOW' ? 'green-text' : act === 'BLOCK' ? 'red-text' : 'yellow-text';
+            return `ALLOW TCP ${src}:${Math.floor(Math.random()*60000+1024)} -> ${dst}:${Math.floor(Math.random()*1000)}`;
+        }
+
+        function generateCloudLog() {
+            const services = ['aws.iam.role-eval', 'aws.s3.asset-store', 'gcp.gke.node-pool-1', 'azure.vm.gateway'];
+            const svc = services[Math.floor(Math.random() * services.length)];
+            return `INFO [${svc}] Successfully dispatched container replica set scheduler`;
+        }
+
+        function generateDbLog() {
+            const queries = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'VACUUM'];
+            const q = queries[Math.floor(Math.random() * queries.length)];
+            const dur = Math.floor(Math.random() * 3000);
+            return dur > 1500 
+                ? `SLOW ${q} query executed in ${dur}ms: tablespace lock conflicts`
+                : `OK ${q} query resolved on metrics table (0.04ms)`;
+        }
+
+        function generateKernelLog() {
+            const address = '0x7FFF' + Math.floor(Math.random() * 1000000000).toString(16).toUpperCase();
+            return `${address}:  ${Math.floor(Math.random()*90+10)} ${Math.floor(Math.random()*90+10)} ${Math.floor(Math.random()*90+10)}  ${Math.floor(Math.random()*90+10)} ${Math.floor(Math.random()*90+10)} ${Math.floor(Math.random()*90+10)}`;
+        }
+
+        function generateAiLog() {
+            return `Prompt: "Verify security boundary tokens..."\n  └─ Checkpoint: verified LLM policy parameters`;
+        }
+
+        function generateTfLog() {
+            return `aws_instance.api_server: Creating resource properties...`;
+        }
+
+        function generateMfLog() {
+            const jobs = ['RECON1', 'DBBACKUP', 'PAYROLL', 'MONLOG', 'CICSGRP'];
+            const job = jobs[Math.floor(Math.random() * jobs.length)];
+            return `${new Date().toLocaleTimeString()} JOB${Math.floor(Math.random()*9000+1000)} $HASP373 ${job} STARTED - INIT 3 - CLASS A`;
+        }
+
+        // Support keyboard switching (1-8 and E/e/F/f)
+        document.addEventListener('keydown', (e) => {
+            let targetBtn = null;
+            if (e.key >= '1' && e.key <= '8') {
+                targetBtn = navButtons[parseInt(e.key) - 1];
+            } else if (e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') {
+                targetBtn = navButtons[8]; // Alert button
+            }
+            if (targetBtn) {
+                targetBtn.click();
+            }
+        });
+
+        // Fetch latest version from GitHub API
+        fetch('https://api.github.com/repos/michaelsanford/Bosskey/releases/latest')
+            .then(r => r.json())
+            .then(data => {
+                if (data.tag_name) {
+                    const btn = document.getElementById('install-button');
+                    btn.innerHTML = `📥 Download Bosskey (${data.tag_name})`;
+                }
+            })
+            .catch(() => {});
+
+        // Render first view
+        renderScreen();
+    </script>
+</body>
+</html>
